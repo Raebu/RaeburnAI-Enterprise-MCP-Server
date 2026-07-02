@@ -24,7 +24,7 @@ export const gmailConnector: EnterpriseConnector = {
       connector: 'gmail',
       risk: 'read',
       description: 'Search Gmail messages using Gmail search syntax.',
-      inputSchema: z.object({ query: z.string().default('in:inbox'), limit: z.number().int().min(1).max(25).default(10) }),
+      inputSchema: z.object({ query: z.string().min(1).max(500).default('in:inbox'), limit: z.number().int().min(1).max(25).default(10) }),
       async run(input, { config }) {
         const gmail = google.gmail({ version: 'v1', auth: googleAuth(config) });
         const result = await gmail.users.messages.list({ userId: 'me', q: input.query, maxResults: input.limit });
@@ -35,8 +35,8 @@ export const gmailConnector: EnterpriseConnector = {
       name: 'gmail.get_message',
       connector: 'gmail',
       risk: 'read',
-      description: 'Read a Gmail message by id.',
-      inputSchema: z.object({ messageId: z.string().min(1) }),
+      description: 'Read safe Gmail message metadata by id.',
+      inputSchema: z.object({ messageId: z.string().min(1).max(200) }),
       async run(input, { config }) {
         const gmail = google.gmail({ version: 'v1', auth: googleAuth(config) });
         const result = await gmail.users.messages.get({ userId: 'me', id: input.messageId, format: 'metadata' });
@@ -57,7 +57,7 @@ export const calendarConnector: EnterpriseConnector = {
       connector: 'calendar',
       risk: 'read',
       description: 'List upcoming calendar events.',
-      inputSchema: z.object({ calendarId: z.string().default('primary'), limit: z.number().int().min(1).max(50).default(10) }),
+      inputSchema: z.object({ calendarId: z.string().min(1).max(200).default('primary'), limit: z.number().int().min(1).max(50).default(10) }),
       async run(input, { config }) {
         const calendar = google.calendar({ version: 'v3', auth: googleAuth(config) });
         const result = await calendar.events.list({ calendarId: input.calendarId, maxResults: input.limit, singleEvents: true, orderBy: 'startTime', timeMin: new Date().toISOString() });
@@ -77,11 +77,12 @@ export const googleDriveConnector: EnterpriseConnector = {
       name: 'google_drive.search_files',
       connector: 'google-drive',
       risk: 'read',
-      description: 'Search Google Drive files.',
-      inputSchema: z.object({ query: z.string().min(1), limit: z.number().int().min(1).max(50).default(10) }),
+      description: 'Search Google Drive file metadata.',
+      inputSchema: z.object({ query: z.string().min(1).max(100), limit: z.number().int().min(1).max(50).default(10) }),
       async run(input, { config }) {
         const drive = google.drive({ version: 'v3', auth: googleAuth(config) });
-        const result = await drive.files.list({ q: `name contains '${input.query.replaceAll("'", "\\'")}' and trashed=false`, pageSize: input.limit, fields: 'files(id,name,mimeType,webViewLink,modifiedTime)' });
+        const safeQuery = input.query.replaceAll("'", "\\'");
+        const result = await drive.files.list({ q: `name contains '${safeQuery}' and trashed=false`, pageSize: input.limit, fields: 'files(id,name,mimeType,webViewLink,modifiedTime)' });
         return result.data.files ?? [];
       }
     })
