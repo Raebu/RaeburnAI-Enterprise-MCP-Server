@@ -1,0 +1,14 @@
+services:
+  enterprise-mcp:
+    build: .
+    image: raeburnai-enterprise-mcp:local
+    env_file:
+      - .env
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
