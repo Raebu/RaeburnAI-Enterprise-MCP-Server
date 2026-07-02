@@ -1,0 +1,39 @@
+{
+  "demoQueries": [
+    {
+      "tool": "enterprise.health",
+      "description": "Confirm server status and configured connectors."
+    },
+    {
+      "tool": "github.list_issues",
+      "input": {
+        "owner": "The-Raeburn-Group",
+        "repo": "RaeburnAI-Enterprise-MCP-Server",
+        "state": "open"
+      }
+    },
+    {
+      "tool": "supabase.select",
+      "input": {
+        "table": "public_demo_accounts",
+        "limit": 10
+      }
+    }
+  ],
+  "demoTables": {
+    "public_demo_accounts": [
+      {
+        "id": 1,
+        "name": "Acme Consulting",
+        "status": "pilot",
+        "risk": "low"
+      },
+      {
+        "id": 2,
+        "name": "Northstar Retail",
+        "status": "discovery",
+        "risk": "medium"
+      }
+    ]
+  }
+}
