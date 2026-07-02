@@ -8,12 +8,22 @@ export interface ToolPolicyDecision {
   reason?: string;
 }
 
+function matchesPattern(pattern: string, toolName: string): boolean {
+  if (pattern === toolName) return true;
+  if (pattern.endsWith('.*')) return toolName.startsWith(pattern.slice(0, -1));
+  return false;
+}
+
+function listMatches(patterns: string[], toolName: string): boolean {
+  return patterns.some((pattern) => matchesPattern(pattern, toolName));
+}
+
 export function evaluateToolPolicy(config: AppConfig, toolName: string, risk: ToolRisk): ToolPolicyDecision {
-  if (config.DENIED_TOOLS.includes(toolName)) {
+  if (listMatches(config.DENIED_TOOLS, toolName)) {
     return { allowed: false, approvalRequired: false, reason: `Tool ${toolName} is explicitly denied.` };
   }
 
-  if (config.ALLOWED_TOOLS.length > 0 && !config.ALLOWED_TOOLS.includes(toolName)) {
+  if (config.ALLOWED_TOOLS.length > 0 && !listMatches(config.ALLOWED_TOOLS, toolName)) {
     return { allowed: false, approvalRequired: false, reason: `Tool ${toolName} is not in ALLOWED_TOOLS.` };
   }
 
@@ -29,8 +39,14 @@ export function maskSecrets(value: unknown): unknown {
 
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, item]) => {
-      if (/token|secret|password|key|authorization/i.test(key)) return [key, '[redacted]'];
+      if (/token|secret|password|key|authorization|cookie|credential/i.test(key)) return [key, '[redacted]'];
       return [key, maskSecrets(item)];
     })
   );
+}
+
+export function limitToolResult(value: string, maxBytes: number): string {
+  const bytes = Buffer.byteLength(value, 'utf8');
+  if (bytes <= maxBytes) return value;
+  return `${value.slice(0, maxBytes)}\n...[truncated ${bytes - maxBytes} bytes]`;
 }
