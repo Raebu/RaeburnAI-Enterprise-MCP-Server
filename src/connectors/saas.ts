@@ -18,12 +18,7 @@ async function microsoftGraph(config: AppConfig, path: string) {
   }
   const tokenResponse = await request(`https://login.microsoftonline.com/${config.MICROSOFT_TENANT_ID}/oauth2/v2.0/token`, {
     method: 'POST',
-    body: new URLSearchParams({
-      client_id: config.MICROSOFT_CLIENT_ID,
-      client_secret: config.MICROSOFT_CLIENT_SECRET,
-      scope: 'https://graph.microsoft.com/.default',
-      grant_type: 'client_credentials'
-    }).toString(),
+    body: new URLSearchParams({ client_id: config.MICROSOFT_CLIENT_ID, client_secret: config.MICROSOFT_CLIENT_SECRET, scope: 'https://graph.microsoft.com/.default', grant_type: 'client_credentials' }).toString(),
     headers: { 'content-type': 'application/x-www-form-urlencoded' }
   });
   const tokenBody = (await tokenResponse.body.json()) as { access_token?: string };
@@ -43,7 +38,7 @@ export const slackConnector: EnterpriseConnector = {
       connector: 'slack',
       risk: 'read',
       description: 'Search Slack messages visible to the configured bot token.',
-      inputSchema: z.object({ query: z.string().min(1), count: z.number().int().min(1).max(20).default(10) }),
+      inputSchema: z.object({ query: z.string().min(1).max(200), count: z.number().int().min(1).max(20).default(10) }),
       async run(input, { config }) {
         if (!config.SLACK_BOT_TOKEN) throw new Error('SLACK_BOT_TOKEN is not configured');
         return new WebClient(config.SLACK_BOT_TOKEN).search.messages({ query: input.query, count: input.count });
@@ -53,8 +48,8 @@ export const slackConnector: EnterpriseConnector = {
       name: 'slack.post_message',
       connector: 'slack',
       risk: 'write',
-      description: 'Post a Slack message after approval.',
-      inputSchema: z.object({ channel: z.string().min(1), text: z.string().min(1).max(4000) }),
+      description: 'Post a Slack message after human approval.',
+      inputSchema: z.object({ channel: z.string().min(1).max(80), text: z.string().min(1).max(4000) }),
       async run(input, { config }) {
         if (!config.SLACK_BOT_TOKEN) throw new Error('SLACK_BOT_TOKEN is not configured');
         return new WebClient(config.SLACK_BOT_TOKEN).chat.postMessage({ channel: input.channel, text: input.text });
@@ -74,7 +69,7 @@ export const sharePointConnector: EnterpriseConnector = {
       connector: 'sharepoint',
       risk: 'read',
       description: 'Search SharePoint sites.',
-      inputSchema: z.object({ query: z.string().min(1) }),
+      inputSchema: z.object({ query: z.string().min(1).max(100) }),
       async run(input, { config }) {
         return microsoftGraph(config, `/sites?search=${encodeURIComponent(input.query)}`);
       }
@@ -92,8 +87,8 @@ export const salesforceConnector: EnterpriseConnector = {
       name: 'salesforce.soql_query',
       connector: 'salesforce',
       risk: 'read',
-      description: 'Run a read-only SOQL query. Use SELECT queries only.',
-      inputSchema: z.object({ query: z.string().regex(/^\s*select\s/i, 'Only SELECT SOQL queries are allowed') }),
+      description: 'Run a read-only SOQL query. Only SELECT queries are accepted.',
+      inputSchema: z.object({ query: z.string().min(8).max(2000).regex(/^\s*select\s/i, 'Only SELECT SOQL queries are allowed').refine((value) => !/\b(insert|update|delete|upsert|undelete|merge)\b/i.test(value), 'Mutation keywords are not allowed') }),
       async run(input, { config }) {
         const conn = new jsforce.Connection({ instanceUrl: config.SALESFORCE_INSTANCE_URL, accessToken: config.SALESFORCE_ACCESS_TOKEN });
         return conn.query(input.query);
@@ -113,14 +108,10 @@ export const hubSpotConnector: EnterpriseConnector = {
       connector: 'hubspot',
       risk: 'read',
       description: 'Search HubSpot contacts by query.',
-      inputSchema: z.object({ query: z.string().min(1), limit: z.number().int().min(1).max(50).default(10) }),
+      inputSchema: z.object({ query: z.string().min(1).max(200), limit: z.number().int().min(1).max(50).default(10) }),
       async run(input, { config }) {
         if (!config.HUBSPOT_ACCESS_TOKEN) throw new Error('HUBSPOT_ACCESS_TOKEN is not configured');
-        const response = await request('https://api.hubapi.com/crm/v3/objects/contacts/search', {
-          method: 'POST',
-          headers: bearerHeaders(config.HUBSPOT_ACCESS_TOKEN),
-          body: JSON.stringify({ query: input.query, limit: input.limit })
-        });
+        const response = await request('https://api.hubapi.com/crm/v3/objects/contacts/search', { method: 'POST', headers: bearerHeaders(config.HUBSPOT_ACCESS_TOKEN), body: JSON.stringify({ query: input.query, limit: input.limit }) });
         return response.body.json();
       }
     })
@@ -138,7 +129,7 @@ export const notionConnector: EnterpriseConnector = {
       connector: 'notion',
       risk: 'read',
       description: 'Search Notion workspace content visible to the integration.',
-      inputSchema: z.object({ query: z.string().min(1), pageSize: z.number().int().min(1).max(50).default(10) }),
+      inputSchema: z.object({ query: z.string().min(1).max(200), pageSize: z.number().int().min(1).max(50).default(10) }),
       async run(input, { config }) {
         if (!config.NOTION_TOKEN) throw new Error('NOTION_TOKEN is not configured');
         return new NotionClient({ auth: config.NOTION_TOKEN }).search({ query: input.query, page_size: input.pageSize });
@@ -161,6 +152,7 @@ export const supabaseConnector: EnterpriseConnector = {
       inputSchema: z.object({ table: z.string().regex(/^[a-zA-Z0-9_]+$/), limit: z.number().int().min(1).max(100).default(25) }),
       async run(input, { config }) {
         if (!config.SUPABASE_URL || !config.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase credentials are not configured');
+        if (config.SUPABASE_ALLOWED_TABLES.length > 0 && !config.SUPABASE_ALLOWED_TABLES.includes(input.table)) throw new Error(`Table ${input.table} is not in SUPABASE_ALLOWED_TABLES`);
         const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
         const { data, error } = await supabase.from(input.table).select('*').limit(input.limit);
         if (error) throw error;
