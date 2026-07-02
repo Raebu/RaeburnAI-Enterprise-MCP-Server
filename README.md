@@ -1,126 +1,100 @@
 # RaeburnAI Enterprise MCP Server
 
-A production-oriented open-source Model Context Protocol server that connects AI assistants to enterprise systems through one governed interface.
+[![CI](https://github.com/The-Raeburn-Group/RaeburnAI-Enterprise-MCP-Server/actions/workflows/ci.yml/badge.svg)](https://github.com/The-Raeburn-Group/RaeburnAI-Enterprise-MCP-Server/actions/workflows/ci.yml) ![Licence](https://img.shields.io/badge/licence-Apache--2.0-blue)
 
-## What it connects to
+## One-line positioning statement
 
-- Gmail
-- Google Calendar
-- GitHub
-- Slack
-- SharePoint / Microsoft Graph
-- Salesforce
-- HubSpot
-- Notion
-- Google Drive
-- Supabase
+A governed enterprise MCP gateway connecting AI assistants to business systems through one secure, auditable server.
 
-## Why this exists
+## Short product description
 
-Most organisations do not need another isolated assistant. They need a secure, auditable layer that lets approved AI tools read from and act across the systems people already use.
+RaeburnAI Enterprise MCP Server is an open-source Model Context Protocol server for Gmail, Calendar, GitHub, Slack, SharePoint, Salesforce, HubSpot, Notion, Google Drive and Supabase. It gives AI assistants a controlled integration layer with typed tools, validation, audit logging, least-privilege configuration and write-action approval controls.
 
-RaeburnAI Enterprise MCP Server provides:
+## Part of the RaeburnAI Platform
 
-- One MCP server for enterprise integrations
-- Typed connector framework
-- Strict environment validation
-- Tool allow/deny policy
-- Approval guard for write tools
-- Audit logs with secret redaction
-- Docker image
-- GitHub Actions CI
-- Open-source governance docs
+RaeburnAI is a modular enterprise AI platform for building, governing and operating practical AI systems across a business. Each project works independently, but together they form a complete operating layer for AI-enabled organisations.
+
+| Layer | Project | Role |
+|---|---|---|
+| Governance | RaeburnAI Compliance Engine | AI governance, GDPR, ISO 42001, ISO 27001 and EU AI Act readiness |
+| Knowledge | Universal AI Knowledge Graph | AI-searchable business knowledge across documents, systems and data |
+| Operations | OpenAI Operations Dashboard | Usage, cost, quality, safety and audit monitoring |
+| Executive | RaeburnAI Executive | CEO briefing, KPIs, risks and suggested actions |
+| Integration | RaeburnAI Enterprise MCP Server | Secure connector layer between AI assistants and enterprise tools |
+| Workflow | RaeburnAI Workflow Auditor | Automation opportunity discovery and savings estimates |
+| Meetings | RaeburnAI Meeting Intelligence | Decisions, actions, owners and follow-up automation |
+| Proposals | RaeburnAI Proposal Generator | Proposals, roadmaps, pricing and ROI estimates |
+| Business Twin | RaeburnAI Business Twin | Digital model of operations, risks and processes |
+| Agent OS | RaeburnAI AgentOS | Multi-agent orchestration, approvals and control |
+
+## Core features
+
+- MCP stdio server for enterprise AI assistants
+- Connectors for Gmail, Calendar, GitHub, Slack, SharePoint, Salesforce, HubSpot, Notion, Google Drive and Supabase
+- Zod input validation for every tool
+- Tool allowlisting and denylisting with wildcard support
+- Human approval guard for write/admin tools
+- Structured logging and redacted audit events
+- Output-size limits and least-privilege deployment guidance
+- CI, CodeQL, Dependabot, Docker and Docker Compose
+
+## Architecture
+
+```text
+AI assistant / MCP host -> RaeburnAI Enterprise MCP Server -> policy, audit and connector adapters -> enterprise SaaS APIs
+```
+
+More detail: `docs/ARCHITECTURE.md`.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/Raebu/RaeburnAI-Enterprise-MCP-Server.git
+git clone https://github.com/The-Raeburn-Group/RaeburnAI-Enterprise-MCP-Server.git
 cd RaeburnAI-Enterprise-MCP-Server
 cp .env.example .env
 npm install
+npm run check
 npm run build
 npm start
 ```
 
-## Configure an MCP client
+Docker:
 
-Example local MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "raeburnai-enterprise": {
-      "command": "node",
-      "args": ["/absolute/path/to/RaeburnAI-Enterprise-MCP-Server/dist/index.js"],
-      "env": {
-        "ENABLED_CONNECTORS": "github,slack,google-drive",
-        "GITHUB_TOKEN": "...",
-        "SLACK_BOT_TOKEN": "..."
-      }
-    }
-  }
-}
+```bash
+docker compose up --build
 ```
-
-## Security model
-
-Write-capable tools are marked as `write` risk and are held by the policy layer by default. For production, deploy with least-privilege OAuth scopes, organisation-owned service accounts, and environment-specific secrets.
-
-Recommended controls:
-
-- Use `ENABLED_CONNECTORS` to expose only required connectors.
-- Use `ALLOWED_TOOLS` for strict tool allowlisting.
-- Use `DENIED_TOOLS` for emergency shutoff.
-- Keep `REQUIRE_APPROVAL_FOR_WRITES=true` unless your host client provides a separate human approval workflow.
-- Keep audit logs enabled.
-- Do not use personal tokens in production.
-
-## Available tools in v0.1
-
-| Connector | Tools |
-|---|---|
-| Enterprise | `enterprise.health` |
-| Gmail | `gmail.search_messages`, `gmail.get_message` |
-| Calendar | `calendar.list_events` |
-| GitHub | `github.search_repositories`, `github.list_issues` |
-| Slack | `slack.search_messages`, `slack.post_message` |
-| SharePoint | `sharepoint.search_sites` |
-| Salesforce | `salesforce.soql_query` |
-| HubSpot | `hubspot.search_contacts` |
-| Notion | `notion.search` |
-| Google Drive | `google_drive.search_files` |
-| Supabase | `supabase.select` |
 
 ## Environment variables
 
-See `.env.example` for all supported variables.
+See `.env.example`. Key controls include `ENABLED_CONNECTORS`, `ALLOWED_TOOLS`, `DENIED_TOOLS`, `REQUIRE_APPROVAL_FOR_WRITES`, `AUDIT_LOG_ENABLED`, `MAX_TOOL_RESULT_BYTES` and connector-specific OAuth/API credentials.
 
-## Development
+## Usage examples
 
-```bash
-npm run dev
-npm run check
-npm run build
-```
+See `examples/mcp-client-config.json` and `examples/demo-data.json`.
 
-## Docker
+## Security model
 
-```bash
-docker build -t raeburnai-enterprise-mcp .
-docker run --rm --env-file .env raeburnai-enterprise-mcp
-```
+- All tools are classified as `read`, `write` or `admin`.
+- Write/admin tools require human approval by default.
+- Production mode refuses to start if write approval is disabled.
+- Audit logs redact secret-like fields.
+- Salesforce is read-only; Supabase can be table-allowlisted.
+- Use organisation-owned apps, service accounts and least-privilege scopes.
+
+More detail: `SECURITY.md` and `docs/PRODUCTION_CHECKLIST.md`.
+
+## Production readiness
+
+This is a hardened open-source foundation suitable for controlled pilots with organisation-owned credentials and MCP host-level human approval. Live enterprise rollout still requires real OAuth apps, tenant-specific scopes, secret management, sandbox connector tests and operational monitoring.
 
 ## Roadmap
 
-- OAuth device-code setup wizard
-- Human approval callback adapters
-- Fine-grained per-user permissions
-- Read/write Salesforce and HubSpot workflows
-- Jira, Linear and ServiceNow connectors
-- Tenant-aware cloud deployment mode
-- OpenTelemetry traces and metrics
-- Policy-as-code with OPA/Rego
+See `ROADMAP.md`.
 
-## License
+## Contributing
+
+See `CONTRIBUTING.md`.
+
+## Licence
 
 Apache-2.0. See `LICENSE`.
