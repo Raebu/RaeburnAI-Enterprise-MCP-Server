@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "raeburnai-enterprise": {
+      "command": "node",
+      "args": ["/absolute/path/to/RaeburnAI-Enterprise-MCP-Server/dist/index.js"],
+      "env": {
+        "NODE_ENV": "production",
+        "ENABLED_CONNECTORS": "github,slack,google-drive",
+        "ALLOWED_TOOLS": "enterprise.*,github.*,google_drive.*,slack.search_messages",
+        "REQUIRE_APPROVAL_FOR_WRITES": "true",
+        "AUDIT_LOG_ENABLED": "true"
+      }
+    }
+  }
+}
